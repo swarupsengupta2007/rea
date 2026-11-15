@@ -2413,6 +2413,7 @@ const examinePdb = async (
       throw new ArtifactReaderFailure(
         "integrity",
         `Member changed during acquisition: ${filePath}`,
+        { integrityCheck: "member-identity" },
       );
     readPdb(state, snapshot.bytes, filePath);
   } catch (cause) {
@@ -2586,6 +2587,7 @@ const embeddedPackageFormat = async (
           throw new ArtifactReaderFailure(
             "integrity",
             `Member changed during acquisition: ${filePath}`,
+            { integrityCheck: "member-identity" },
           );
       }
       return { kind: "absent" };
@@ -3053,7 +3055,9 @@ const readStreamBounded = async (
       hash !== undefined &&
       hash.digest("hex") !== expected.sha256
     )
-      throw new ArtifactReaderFailure("integrity", expected.changed);
+      throw new ArtifactReaderFailure("integrity", expected.changed, {
+        integrityCheck: "member-identity",
+      });
   } catch (cause) {
     failure = cause;
   }
@@ -3100,6 +3104,7 @@ const readSpan = async (
           throw new ArtifactReaderFailure(
             "integrity",
             `Artifact changed before read: ${filePath}`,
+            { integrityCheck: "member-identity" },
           );
         if (offset + length > observed.size) return null;
         // Charge bytes as they arrive, so a read that fails after partial
@@ -3120,6 +3125,7 @@ const readSpan = async (
           throw new ArtifactReaderFailure(
             "integrity",
             `Artifact changed during read: ${filePath}`,
+            { integrityCheck: "member-identity" },
           );
         state.memberBytesRead += bytes.length - charged;
         return Buffer.from(bytes);
@@ -3151,6 +3157,7 @@ const readDiskMember = async (
       throw new ArtifactReaderFailure(
         "integrity",
         `Member changed during acquisition: ${filePath}`,
+        { integrityCheck: "member-identity" },
       );
     return { kind: "bytes", bytes: snapshot.bytes };
   } catch (cause) {
@@ -3621,6 +3628,9 @@ const releaseExposureFailurePrimary = (
   )
     return new AnalysisArtifactChangedError(OPERATION, path, cause.message, {
       cause,
+      ...(cause.integrityCheck === undefined
+        ? {}
+        : { integrityCheck: cause.integrityCheck }),
     });
   if (
     origin === "owned-or-classified" &&
